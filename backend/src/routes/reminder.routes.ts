@@ -1,23 +1,21 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate';
-import { errorResponse } from '../utils/response';
+import { validateBody, validateQuery } from '../middleware/validate';
+import { reminderController } from '../controllers/reminder.controller';
+import {
+  createReminderSchema,
+  updateReminderSchema,
+  queryReminderSchema,
+} from '../schemas/reminder.schema';
 
 export const reminderRouter = Router();
 
+// Enforce authentication on all reminder routes
 reminderRouter.use(authenticate);
 
-reminderRouter.get('/', (_req, res) => {
-  errorResponse(res, 501, 'Reminders endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-reminderRouter.post('/', (_req, res) => {
-  errorResponse(res, 501, 'Reminders endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-reminderRouter.get('/:id', (_req, res) => {
-  errorResponse(res, 501, 'Reminders endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-reminderRouter.put('/:id', (_req, res) => {
-  errorResponse(res, 501, 'Reminders endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-reminderRouter.delete('/:id', (_req, res) => {
-  errorResponse(res, 501, 'Reminders endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
+reminderRouter.get('/', validateQuery(queryReminderSchema), reminderController.list);
+reminderRouter.post('/', validateBody(createReminderSchema), reminderController.create);
+reminderRouter.get('/:id', reminderController.getById);
+reminderRouter.patch('/:id', validateBody(updateReminderSchema), reminderController.update);
+reminderRouter.delete('/:id', reminderController.delete);
+reminderRouter.post('/:id/complete', reminderController.complete);
