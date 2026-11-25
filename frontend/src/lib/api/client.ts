@@ -15,15 +15,17 @@ export class ApiError extends Error {
   }
 }
 
-async function getAuthHeader(): Promise<HeadersInit> {
+async function getAuthHeader(isFormData: boolean = false): Promise<HeadersInit> {
   const supabase = createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
+
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (session?.access_token) {
     headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -36,7 +38,8 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const headers = await getAuthHeader();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const headers = await getAuthHeader(isFormData);
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   const response = await fetch(url, {
@@ -73,14 +76,20 @@ export const api = {
     apiRequest<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     }),
   patch: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     }),
   delete: <T>(endpoint: string, options?: RequestInit) =>
     apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
+  upload: <T>(endpoint: string, formData: FormData, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: formData,
+    }),
 };

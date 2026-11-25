@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodSchema, ZodError } from 'zod';
+import { ZodType, ZodError } from 'zod';
 import { ValidationError } from '../utils/errors';
 
 function formatZodError(error: ZodError): Record<string, string[]> {
@@ -16,7 +16,7 @@ function formatZodError(error: ZodError): Record<string, string[]> {
  * Validates req.body against a Zod schema.
  * On failure throws ValidationError (422) with field-level details.
  */
-export function validateBody<T>(schema: ZodSchema<T>) {
+export function validateBody<T = any>(schema: ZodType<T, any, any>) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
@@ -31,7 +31,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
  * Validates req.query against a Zod schema.
  * On failure throws ValidationError (422) with field-level details.
  */
-export function validateQuery<T>(schema: ZodSchema<T>) {
+export function validateQuery<T = any>(schema: ZodType<T, any, any>) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
@@ -39,6 +39,7 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
     }
     // Cast — query params are always strings from Express but schema may coerce
     (req as Request & { validatedQuery: T }).validatedQuery = result.data;
+    req.query = result.data as any;
     next();
   };
 }
@@ -46,7 +47,7 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
 /**
  * Validates req.params against a Zod schema.
  */
-export function validateParams<T>(schema: ZodSchema<T>) {
+export function validateParams<T = any>(schema: ZodType<T, any, any>) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.params);
     if (!result.success) {

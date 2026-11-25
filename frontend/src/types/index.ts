@@ -79,6 +79,7 @@ export interface Bill {
   id: string;
   userId: string;
   title: string;
+  description?: string | null;
   provider: string | null;
   amount: number;
   currency: string;
@@ -86,11 +87,25 @@ export interface Bill {
   paymentDate: string | null;
   category: BillCategory;
   status: BillStatus;
+  isRecurring?: boolean;
+  billingCycle?: BillingCycle | null;
+  isOverdue?: boolean;
   notes: string | null;
   attachmentUrl: string | null;
+  attachmentPath?: string | null;
+  signedUrl?: string | null;
   invoiceNumber: string | null;
+  parentId?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BillSummary {
+  unpaidCount: number;
+  unpaidAmount: number;
+  overdueCount: number;
+  overdueAmount: number;
+  paidThisMonthAmount: number;
 }
 
 export interface Subscription {

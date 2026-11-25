@@ -1,23 +1,35 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate';
-import { errorResponse } from '../utils/response';
+import { validateBody, validateQuery } from '../middleware/validate';
+import { uploadInvoiceMiddleware } from '../storage/supabaseStorage';
+import { billController } from '../controllers/bill.controller';
+import {
+  createBillSchema,
+  updateBillSchema,
+  queryBillSchema,
+  markBillPaidSchema,
+} from '../schemas/bill.schema';
 
 export const billRouter = Router();
 
+// Enforce authentication on all bill routes
 billRouter.use(authenticate);
 
-billRouter.get('/', (_req, res) => {
-  errorResponse(res, 501, 'Bills endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-billRouter.post('/', (_req, res) => {
-  errorResponse(res, 501, 'Bills endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-billRouter.get('/:id', (_req, res) => {
-  errorResponse(res, 501, 'Bills endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-billRouter.put('/:id', (_req, res) => {
-  errorResponse(res, 501, 'Bills endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
-billRouter.delete('/:id', (_req, res) => {
-  errorResponse(res, 501, 'Bills endpoint not yet implemented', 'NOT_IMPLEMENTED');
-});
+billRouter.get('/', validateQuery(queryBillSchema), billController.list);
+billRouter.get('/summary', billController.summary);
+billRouter.post(
+  '/',
+  uploadInvoiceMiddleware.single('file'),
+  validateBody(createBillSchema),
+  billController.create
+);
+billRouter.get('/:id', billController.getById);
+billRouter.patch('/:id', validateBody(updateBillSchema), billController.update);
+billRouter.delete('/:id', billController.delete);
+billRouter.post('/:id/mark-paid', validateBody(markBillPaidSchema), billController.markPaid);
+billRouter.post(
+  '/:id/attachment',
+  uploadInvoiceMiddleware.single('file'),
+  billController.uploadAttachment
+);
+billRouter.get('/:id/attachment-url', billController.getAttachmentUrl);
