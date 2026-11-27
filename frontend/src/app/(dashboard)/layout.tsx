@@ -15,13 +15,16 @@ import {
   Settings,
   LogOut,
   User as UserIcon,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '@/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 
 const navItems = [
   { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-  { href: '/reminders', label: 'Reminders', icon: Bell },
+  { href: '/notifications', label: 'Notifications', icon: Bell },
+  { href: '/reminders', label: 'Reminders', icon: Clock },
   { href: '/bills', label: 'Bills & Invoices', icon: Receipt },
   { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
   { href: '/expenses', label: 'Expenses', icon: DollarSign },
@@ -113,6 +116,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
               ● Live Session
             </span>
+            <div className="h-5 w-px bg-slate-200" />
+            <NotificationBell />
           </div>
         </header>
 

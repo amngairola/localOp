@@ -1,0 +1,56 @@
+services:
+  # ── LifeOps Web API Service ──────────────────────────────────────────────────
+  - type: web
+    name: lifeops-backend
+    runtime: node
+    plan: starter
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+
+  # ── Optional: Dedicated Always-On Background Worker ──────────────────────────
+  # For paid Render tiers that do not sleep, or trigger via Render Cron Job.
+  - type: worker
+    name: lifeops-worker
+    runtime: node
+    plan: starter
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: lifeops-backend
+          envVarKey: CRON_SECRET

@@ -311,3 +311,58 @@ export interface ApiResponse<T = unknown> {
   code?: string;
   details?: unknown;
 }
+
+export type NotificationType =
+  | 'REMINDER_DUE'
+  | 'REMINDER_UPCOMING'
+  | 'BILL_DUE'
+  | 'BILL_OVERDUE'
+  | 'SUBSCRIPTION_RENEWAL'
+  | 'TRIAL_ENDING'
+  | 'BUDGET_WARNING'
+  | 'BUDGET_EXCEEDED'
+  | 'SYSTEM';
+
+export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+export type NotificationStatus = 'UNREAD' | 'READ' | 'ARCHIVED';
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  priority: NotificationPriority;
+  status: NotificationStatus;
+  link?: string | null;
+  reminderId?: string | null;
+  billId?: string | null;
+  subscriptionId?: string | null;
+  expenseId?: string | null;
+  emailSent: boolean;
+  emailSentAt?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reminder?: { id: string; title: string; dueDate: string; priority: string } | null;
+  bill?: { id: string; title: string; amount: number; currency: string; dueDate: string } | null;
+  subscription?: { id: string; name: string; amount: number; currency: string; nextRenewal: string } | null;
+}
+
+export interface NotificationPreferences {
+  id: string;
+  userId: string;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  reminderLeadMinutes: number;
+  billLeadDays: number;
+  subscriptionLeadDays: number;
+  trialLeadDays: number;
+  budgetThresholdPercent: number;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+

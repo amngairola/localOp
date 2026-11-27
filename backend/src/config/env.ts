@@ -34,7 +34,9 @@ const envSchema = z.object({
 
   // Optional notification providers
   RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default('LifeOps <notifications@lifeops.app>'),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
+  CRON_SECRET: z.string().default('lifeops-cron-secret-2026'),
 
   // Optional JWT secret
   JWT_SECRET: z.string().optional(),

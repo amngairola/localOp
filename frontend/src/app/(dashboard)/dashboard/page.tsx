@@ -17,6 +17,7 @@ import {
   useVaultStats,
   useDocuments,
 } from '@/features/documents/hooks/useDocuments';
+import { useNotifications } from '@/features/notifications/hooks/useNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -96,6 +97,11 @@ export default function AuthenticatedDashboardPage() {
     sortOrder: 'desc',
   });
 
+  const { data: unreadAlerts = [] } = useNotifications({
+    status: 'UNREAD',
+    limit: 3,
+  });
+
   const pendingRemindersCount = reminders?.length ?? 0;
   const unpaidBillsAmount = billSummary?.unpaidAmount ?? 0;
   const overdueBillsCount = billSummary?.overdueCount ?? 0;
@@ -129,6 +135,39 @@ export default function AuthenticatedDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Urgent Alerts Banner (If Unread Notifications Exist) */}
+      {unreadAlerts.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2 text-amber-800 font-semibold text-sm">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <span>Action Items & Urgent Alerts ({unreadAlerts.length})</span>
+            </div>
+            <Link
+              href="/notifications"
+              className="text-xs font-semibold text-amber-700 hover:text-amber-800 flex items-center space-x-1"
+            >
+              <span>View all</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {unreadAlerts.map((alert) => (
+              <Link
+                key={alert.id}
+                href={alert.link || '/notifications'}
+                className="p-2.5 bg-white/80 hover:bg-white rounded-lg border border-amber-100 transition-colors flex items-start space-x-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">{alert.title}</p>
+                  <p className="text-[11px] text-slate-600 truncate mt-0.5">{alert.body}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
