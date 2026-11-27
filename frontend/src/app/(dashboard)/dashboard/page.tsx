@@ -1,10 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/providers/AuthProvider';
 import { useReminders } from '@/features/reminders/hooks/useReminders';
 import { useBillSummary, useBills } from '@/features/bills/hooks/useBills';
+import {
+  useSubscriptionSummary,
+  useSubscriptions,
+} from '@/features/subscriptions/hooks/useSubscriptions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,11 +24,17 @@ import {
   AlertTriangle,
   Calendar,
   CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 
 export default function AuthenticatedDashboardPage() {
   const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: reminders, isLoading: remindersLoading } = useReminders({
     status: 'PENDING',
@@ -41,10 +51,23 @@ export default function AuthenticatedDashboardPage() {
     sortOrder: 'asc',
   });
 
+  const { data: subSummary, isLoading: subSummaryLoading } = useSubscriptionSummary();
+  const { data: upcomingSubs, isLoading: subsLoading } = useSubscriptions({
+    status: 'ACTIVE',
+    limit: 5,
+    sortBy: 'nextRenewal',
+    sortOrder: 'asc',
+  });
+
   const pendingRemindersCount = reminders?.length ?? 0;
   const unpaidBillsAmount = billSummary?.unpaidAmount ?? 0;
   const overdueBillsCount = billSummary?.overdueCount ?? 0;
   const paidThisMonthAmount = billSummary?.paidThisMonthAmount ?? 0;
+
+  const activeSubsCount = subSummary?.activeCount ?? 0;
+  const monthlySubBurn = subSummary?.totalMonthlyCost ?? 0;
+  const upcomingRenewalsCount = subSummary?.upcomingRenewalsCount ?? 0;
+  const trialsEndingSoonCount = subSummary?.trialEndingSoonCount ?? 0;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -126,8 +149,19 @@ export default function AuthenticatedDashboardPage() {
             <CreditCard className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900">0 Tracked</div>
-            <p className="text-xs text-slate-500 mt-1">Add to monitor renewals</p>
+            {subSummaryLoading ? (
+              <Skeleton className="h-8 w-24 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-slate-900">
+                {activeSubsCount} Active
+              </div>
+            )}
+            <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
+              <span>₹{monthlySubBurn.toFixed(2)}/mo burn</span>
+              {trialsEndingSoonCount > 0 && (
+                <span className="text-amber-600 font-medium">{trialsEndingSoonCount} trial alert</span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -152,14 +186,14 @@ export default function AuthenticatedDashboardPage() {
         </Card>
       </div>
 
-      {/* Live Data Sections: Upcoming Reminders & Bills */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Live Data Sections: Upcoming Reminders, Bills & Subscriptions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Reminders preview */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="text-base font-semibold">Upcoming Reminders</CardTitle>
-              <CardDescription>Tasks and notifications needing attention</CardDescription>
+              <CardDescription>Tasks needing attention</CardDescription>
             </div>
             <Link href="/reminders">
               <Button variant="ghost" size="sm" className="text-xs gap-1 text-sky-600 hover:text-sky-700">
@@ -177,7 +211,7 @@ export default function AuthenticatedDashboardPage() {
             ) : !reminders || reminders.length === 0 ? (
               <div className="text-center py-6 text-slate-400">
                 <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-slate-300" />
-                <p className="text-sm">No pending reminders right now</p>
+                <p className="text-sm">No pending reminders</p>
                 <Link href="/reminders">
                   <Button variant="outline" size="sm" className="mt-3 text-xs">
                     Create Reminder
@@ -188,7 +222,7 @@ export default function AuthenticatedDashboardPage() {
               <div className="space-y-2">
                 {reminders.slice(0, 4).map((reminder) => {
                   const dueDate = parseISO(reminder.dueDate);
-                  const isOverdue = isPast(dueDate);
+                  const isOverdue = mounted && isPast(dueDate);
                   return (
                     <div
                       key={reminder.id}
@@ -201,7 +235,7 @@ export default function AuthenticatedDashboardPage() {
                         <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
                           <Calendar className="h-3 w-3" />
                           <span className={isOverdue ? 'text-rose-500 font-medium' : ''}>
-                            {format(dueDate, 'MMM d, yyyy')}
+                            {mounted ? format(dueDate, 'MMM d, yyyy') : 'Loading...'}
                           </span>
                         </div>
                       </div>
@@ -228,7 +262,7 @@ export default function AuthenticatedDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="text-base font-semibold">Upcoming Bills</CardTitle>
-              <CardDescription>Invoices and dues to be cleared</CardDescription>
+              <CardDescription>Invoices to be cleared</CardDescription>
             </div>
             <Link href="/bills">
               <Button variant="ghost" size="sm" className="text-xs gap-1 text-amber-600 hover:text-amber-700">
@@ -257,7 +291,7 @@ export default function AuthenticatedDashboardPage() {
               <div className="space-y-2">
                 {upcomingBills.slice(0, 4).map((bill) => {
                   const dueDate = parseISO(bill.dueDate);
-                  const isOverdue = bill.isOverdue || isPast(dueDate);
+                  const isOverdue = mounted && (bill.isOverdue || isPast(dueDate));
                   return (
                     <div
                       key={bill.id}
@@ -277,7 +311,7 @@ export default function AuthenticatedDashboardPage() {
                         <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
                           <Calendar className="h-3 w-3" />
                           <span className={isOverdue ? 'text-rose-500 font-medium' : ''}>
-                            Due {format(dueDate, 'MMM d, yyyy')}
+                            {mounted ? `Due ${format(dueDate, 'MMM d, yyyy')}` : 'Loading...'}
                           </span>
                         </div>
                       </div>
@@ -290,6 +324,80 @@ export default function AuthenticatedDashboardPage() {
                             Overdue
                           </Badge>
                         )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Subscriptions preview */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-base font-semibold">Subscriptions</CardTitle>
+              <CardDescription>Upcoming renewals & trials</CardDescription>
+            </div>
+            <Link href="/subscriptions">
+              <Button variant="ghost" size="sm" className="text-xs gap-1 text-purple-600 hover:text-purple-700">
+                View All
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {subsLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : !upcomingSubs || upcomingSubs.length === 0 ? (
+              <div className="text-center py-6 text-slate-400">
+                <CreditCard className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm">No active subscriptions</p>
+                <Link href="/subscriptions">
+                  <Button variant="outline" size="sm" className="mt-3 text-xs">
+                    Track Subscription
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {upcomingSubs.slice(0, 4).map((sub) => {
+                  const renewalDate = parseISO(sub.nextRenewal);
+                  const isRenewalPast = mounted && isPast(renewalDate);
+                  return (
+                    <div
+                      key={sub.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 transition-colors"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-slate-800 truncate">
+                            {sub.name}
+                          </p>
+                          {sub.isTrial && (
+                            <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[9px] px-1 py-0">
+                              Trial
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                          <Calendar className="h-3 w-3" />
+                          <span className={isRenewalPast ? 'text-rose-500 font-medium' : ''}>
+                            {mounted ? `Renews ${format(renewalDate, 'MMM d')}` : 'Loading...'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-slate-900">
+                          ₹{Number(sub.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {sub.billingCycle.toLowerCase()}
+                        </p>
                       </div>
                     </div>
                   );
@@ -349,7 +457,7 @@ export default function AuthenticatedDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="rounded-lg bg-white/10 p-3 text-xs text-slate-200">
-              Try asking: &ldquo;How much do I owe across all my pending bills?&rdquo;
+              Try asking: &ldquo;What subscriptions are renewing this month and what is my total monthly burn?&rdquo;
             </div>
             <Link href="/assistant">
               <Button size="sm" className="bg-sky-500 hover:bg-sky-600 text-white gap-2 text-xs w-full">

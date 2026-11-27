@@ -112,6 +112,7 @@ export interface Subscription {
   id: string;
   userId: string;
   name: string;
+  description?: string | null;
   provider: string | null;
   amount: number;
   currency: string;
@@ -121,8 +122,31 @@ export interface Subscription {
   status: SubscriptionStatus;
   category: string | null;
   notes: string | null;
+  paymentMethod?: string | null;
+  websiteUrl?: string | null;
+  isTrial?: boolean;
+  trialStartDate?: string | null;
+  trialEndDate?: string | null;
+  reminderDaysBefore?: number | null;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
+  monthlyEquivalentCost?: number;
+  isOverdue?: boolean;
+  isRenewalUpcoming?: boolean;
+  isTrialEndingSoon?: boolean;
+  isTrialExpired?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SubscriptionSummary {
+  activeCount: number;
+  pausedCount: number;
+  cancelledCount: number;
+  expiredCount: number;
+  totalMonthlyCost: number;
+  upcomingRenewalsCount: number;
+  trialEndingSoonCount: number;
 }
 
 export interface Expense {

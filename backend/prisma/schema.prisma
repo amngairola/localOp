@@ -154,20 +154,29 @@ enum SubscriptionStatus {
 }
 
 model Subscription {
-  id           String             @id @default(uuid())
-  userId       String             @map("user_id")
-  name         String
-  provider     String?
-  amount       Decimal            @db.Decimal(12, 2)
-  currency     String             @default("INR")
-  billingCycle BillingCycle       @default(MONTHLY) @map("billing_cycle")
-  startDate    DateTime           @map("start_date")
-  nextRenewal  DateTime           @map("next_renewal")
-  status       SubscriptionStatus @default(ACTIVE)
-  category     String?
-  notes        String?
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
+  id                 String             @id @default(uuid())
+  userId             String             @map("user_id")
+  name               String
+  description        String?
+  provider           String?
+  amount             Decimal            @db.Decimal(12, 2)
+  currency           String             @default("INR")
+  billingCycle       BillingCycle       @default(MONTHLY) @map("billing_cycle")
+  startDate          DateTime           @map("start_date")
+  nextRenewal        DateTime           @map("next_renewal")
+  status             SubscriptionStatus @default(ACTIVE)
+  category           String?
+  notes              String?
+  paymentMethod      String?            @map("payment_method")
+  websiteUrl         String?            @map("website_url")
+  isTrial            Boolean            @default(false) @map("is_trial")
+  trialStartDate     DateTime?          @map("trial_start_date")
+  trialEndDate       DateTime?          @map("trial_end_date")
+  reminderDaysBefore Int?               @default(3) @map("reminder_days_before")
+  cancelledAt        DateTime?          @map("cancelled_at")
+  cancellationReason String?            @map("cancellation_reason")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
   profile Profile @relation(fields: [userId], references: [userId])
 
