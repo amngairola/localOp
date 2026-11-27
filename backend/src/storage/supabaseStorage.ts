@@ -3,16 +3,46 @@ import { getSupabaseAdmin } from '../config/supabase';
 import { logger } from '../utils/logger';
 import { ValidationError } from '../utils/errors';
 
-export const ALLOWED_MIME_TYPES = [
+export const ALLOWED_DOCUMENT_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
   'image/png',
   'image/webp',
+  'image/gif',
+  'image/svg+xml',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+  'text/csv',
 ];
 
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
+export const MAX_DOCUMENT_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15MB limit
 
 const storage = multer.memoryStorage();
+
+export const uploadDocumentMiddleware = multer({
+  storage,
+  limits: {
+    fileSize: MAX_DOCUMENT_FILE_SIZE_BYTES,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_DOCUMENT_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new ValidationError(
+          `Unsupported document type: ${file.mimetype}. Allowed types: PDF, Images, Word, Excel, CSV, Text.`
+        )
+      );
+    }
+  },
+});
+
+export const ALLOWED_MIME_TYPES = ALLOWED_DOCUMENT_MIME_TYPES;
+
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
 
 export const uploadInvoiceMiddleware = multer({
   storage,
@@ -98,6 +128,41 @@ export class SupabaseStorageService {
       };
     } catch (error) {
       logger.warn({ error }, 'Supabase Storage receipt upload failed — fallback to path record');
+      return { storagePath };
+    }
+  }
+
+  async uploadDocument(
+    userId: string,
+    documentId: string,
+    fileBuffer: Buffer,
+    originalName: string,
+    mimeType: string
+  ): Promise<{ storagePath: string }> {
+    const sanitizedName = originalName
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .replace(/\.{2,}/g, '.');
+    const storagePath = `documents/${userId}/${documentId}/${Date.now()}_${sanitizedName}`;
+
+    try {
+      const supabase = getSupabaseAdmin();
+
+      const { data, error } = await supabase.storage
+        .from(this.bucketName)
+        .upload(storagePath, fileBuffer, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (error) {
+        logger.warn({ error, storagePath }, 'Supabase Storage upload warning for document');
+      }
+
+      return {
+        storagePath: data?.path || storagePath,
+      };
+    } catch (error) {
+      logger.warn({ error }, 'Supabase Storage document upload failed — fallback to path record');
       return { storagePath };
     }
   }

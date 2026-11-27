@@ -58,7 +58,15 @@ export type PaymentMethod =
   | 'OTHER';
 
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-export type DocumentType = 'PDF' | 'IMAGE' | 'INVOICE' | 'RECEIPT' | 'OTHER';
+export type DocumentType =
+  | 'PDF'
+  | 'IMAGE'
+  | 'INVOICE'
+  | 'RECEIPT'
+  | 'WORD'
+  | 'SPREADSHEET'
+  | 'TEXT'
+  | 'OTHER';
 export type ProcessingStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface Reminder {
@@ -228,6 +236,60 @@ export interface Task {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type DocumentCategory =
+  | 'IDENTITY'
+  | 'EDUCATION'
+  | 'EMPLOYMENT'
+  | 'FINANCIAL'
+  | 'INSURANCE'
+  | 'MEDICAL'
+  | 'LEGAL'
+  | 'PERSONAL'
+  | 'OTHER';
+
+export interface Folder {
+  id: string;
+  userId: string;
+  name: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+  documentCount?: number;
+}
+
+export interface Document {
+  id: string;
+  userId: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  storagePath: string;
+  category: DocumentCategory;
+  type: DocumentType;
+  description?: string | null;
+  tags: string[];
+  folderId?: string | null;
+  folder?: { id: string; name: string; color: string } | null;
+  billId?: string | null;
+  bill?: { id: string; title: string; amount: number; currency: string } | null;
+  expenseId?: string | null;
+  expense?: { id: string; title: string; amount: number; currency: string } | null;
+  subscriptionId?: string | null;
+  subscription?: { id: string; name: string; amount: number; currency: string } | null;
+  signedUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VaultStats {
+  totalDocuments: number;
+  totalSizeBytes: number;
+  totalFolders: number;
+  categoryBreakdown: { category: DocumentCategory; count: number }[];
+  typeBreakdown: { type: DocumentType; count: number }[];
 }
 
 export interface DashboardSummary {

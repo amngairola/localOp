@@ -13,6 +13,10 @@ import {
   useExpenseAnalytics,
   useExpenses,
 } from '@/features/expenses/hooks/useExpenses';
+import {
+  useVaultStats,
+  useDocuments,
+} from '@/features/documents/hooks/useDocuments';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +35,9 @@ import {
   TrendingDown,
   TrendingUp,
   ShoppingBag,
+  Files,
+  HardDrive,
+  FolderLock,
 } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 
@@ -82,6 +89,13 @@ export default function AuthenticatedDashboardPage() {
     sortOrder: 'desc',
   });
 
+  const { data: vaultStats, isLoading: vaultStatsLoading } = useVaultStats();
+  const { data: recentDocuments, isLoading: recentDocsLoading } = useDocuments({
+    limit: 4,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
+
   const pendingRemindersCount = reminders?.length ?? 0;
   const unpaidBillsAmount = billSummary?.unpaidAmount ?? 0;
   const overdueBillsCount = billSummary?.overdueCount ?? 0;
@@ -117,7 +131,7 @@ export default function AuthenticatedDashboardPage() {
       </div>
 
       {/* Summary Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Pending Reminders Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -218,6 +232,26 @@ export default function AuthenticatedDashboardPage() {
               )}
               <span className="text-slate-400">vs last month</span>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Document Vault Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">Personal Vault</CardTitle>
+            <FolderLock className="h-4 w-4 text-indigo-600" />
+          </CardHeader>
+          <CardContent>
+            {vaultStatsLoading ? (
+              <Skeleton className="h-8 w-24 mb-1" />
+            ) : (
+              <div className="text-2xl font-bold text-slate-900">
+                {vaultStats?.totalDocuments ?? recentDocuments?.length ?? 0} Docs
+              </div>
+            )}
+            <p className="text-xs text-slate-500 mt-1">
+              {vaultStats ? `${(vaultStats.totalSizeBytes / (1024 * 1024)).toFixed(1)} MB stored` : 'Encrypted storage'}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -505,6 +539,66 @@ export default function AuthenticatedDashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Recent Vault Documents */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <Files className="h-4 w-4 text-indigo-600" />
+              <CardTitle className="text-base font-semibold">Vault Documents</CardTitle>
+            </div>
+            <CardDescription>Recently stored records, policies, IDs, and invoices</CardDescription>
+          </div>
+          <Link href="/documents">
+            <Button variant="ghost" size="sm" className="text-xs gap-1 text-indigo-600 hover:text-indigo-700">
+              View Vault
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {recentDocsLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : !recentDocuments || recentDocuments.length === 0 ? (
+            <div className="text-center py-6 text-slate-400">
+              <Files className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm">No documents in vault yet</p>
+              <Link href="/documents">
+                <Button variant="outline" size="sm" className="mt-3 text-xs">
+                  Upload Document
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {recentDocuments.map((doc) => (
+                <Link
+                  key={doc.id}
+                  href="/documents"
+                  className="p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:border-slate-200 transition-colors block"
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="text-sm font-medium text-slate-800 truncate">{doc.name}</p>
+                    <span className="text-[11px] bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 font-semibold">
+                      {doc.category}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+                    <span className="truncate max-w-[130px]">{doc.originalName}</span>
+                    <span>
+                      {(doc.size / (1024 * 1024)).toFixed(1)} MB
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Quick Launchpad & Assistant CTA */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -535,6 +629,12 @@ export default function AuthenticatedDashboardPage() {
               <Button variant="outline" className="w-full justify-start gap-2 text-xs border-slate-200">
                 <Plus className="h-3.5 w-3.5 text-emerald-600" />
                 Log Expense
+              </Button>
+            </Link>
+            <Link href="/documents" className="col-span-2">
+              <Button variant="outline" className="w-full justify-start gap-2 text-xs border-slate-200 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                <Plus className="h-3.5 w-3.5 text-indigo-600" />
+                Upload Document to Vault
               </Button>
             </Link>
           </CardContent>

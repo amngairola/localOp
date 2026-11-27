@@ -22,6 +22,7 @@ model Profile {
   subscriptions     Subscription[]
   expenses          Expense[]
   budgets           Budget[]
+  folders           Folder[]
   tasks             Task[]
   documents         Document[]
   conversations     Conversation[]
@@ -129,7 +130,8 @@ model Bill {
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
   profile  Profile   @relation(fields: [userId], references: [userId])
-  document Document? @relation(fields: [documentId], references: [id])
+  document Document? @relation("LegacyDocumentBills", fields: [documentId], references: [id])
+  linkedDocuments Document[] @relation("DocumentBillAssociation")
   parent   Bill?     @relation("BillRecurrenceChain", fields: [parentId], references: [id])
   children Bill[]    @relation("BillRecurrenceChain")
 
@@ -180,6 +182,7 @@ model Subscription {
   updatedAt          DateTime           @updatedAt @map("updated_at")
 
   profile Profile @relation(fields: [userId], references: [userId])
+  documents Document[]
 
   @@index([userId])
   @@index([userId, status])
@@ -236,6 +239,7 @@ model Expense {
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
   profile Profile @relation(fields: [userId], references: [userId])
+  documents Document[]
 
   @@index([userId])
   @@index([userId, date])
@@ -293,6 +297,21 @@ enum DocumentType {
   IMAGE
   INVOICE
   RECEIPT
+  WORD
+  SPREADSHEET
+  TEXT
+  OTHER
+}
+
+enum DocumentCategory {
+  IDENTITY
+  EDUCATION
+  EMPLOYMENT
+  FINANCIAL
+  INSURANCE
+  MEDICAL
+  LEGAL
+  PERSONAL
   OTHER
 }
 
@@ -303,26 +322,55 @@ enum ProcessingStatus {
   FAILED
 }
 
-model Document {
-  id               String          @id @default(uuid())
-  userId           String          @map("user_id")
-  name             String
-  originalName     String          @map("original_name")
-  mimeType         String          @map("mime_type")
-  size             Int
-  storagePath      String          @map("storage_path")
-  publicUrl        String?         @map("public_url")
-  documentType     DocumentType    @default(OTHER) @map("document_type")
-  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
-  extractedData    Json?           @map("extracted_data")
-  processingError  String?         @map("processing_error")
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
+model Folder {
+  id        String     @id @default(uuid())
+  userId    String     @map("user_id")
+  name      String
+  color     String?    @default("#64748b")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
 
-  profile Profile @relation(fields: [userId], references: [userId])
-  bills   Bill[]
+  profile   Profile    @relation(fields: [userId], references: [userId])
+  documents Document[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("folders")
+}
+
+model Document {
+  id               String           @id @default(uuid())
+  userId           String           @map("user_id")
+  name             String
+  originalName     String           @map("original_name")
+  description      String?
+  mimeType         String           @map("mime_type")
+  size             Int
+  storagePath      String           @map("storage_path")
+  publicUrl        String?          @map("public_url")
+  documentType     DocumentType     @default(OTHER) @map("document_type")
+  category         DocumentCategory @default(OTHER)
+  tags             String[]         @default([])
+  folderId         String?          @map("folder_id")
+  billId           String?          @map("bill_id")
+  expenseId        String?          @map("expense_id")
+  subscriptionId   String?          @map("subscription_id")
+  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
+  extractedData    Json?            @map("extracted_data")
+  processingError  String?          @map("processing_error")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  profile      Profile       @relation(fields: [userId], references: [userId])
+  folder       Folder?       @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  bill         Bill?         @relation("DocumentBillAssociation", fields: [billId], references: [id], onDelete: SetNull)
+  expense      Expense?      @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  bills        Bill[]        @relation("LegacyDocumentBills")
 
   @@index([userId])
+  @@index([userId, category])
+  @@index([userId, folderId])
   @@index([userId, processingStatus])
   @@map("documents")
 }
