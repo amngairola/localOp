@@ -69,6 +69,39 @@ export class SupabaseStorageService {
     }
   }
 
+  async uploadReceipt(
+    userId: string,
+    expenseId: string,
+    fileBuffer: Buffer,
+    originalName: string,
+    mimeType: string
+  ): Promise<{ storagePath: string }> {
+    const sanitizedName = originalName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `receipts/${userId}/${expenseId}/${Date.now()}_${sanitizedName}`;
+
+    try {
+      const supabase = getSupabaseAdmin();
+
+      const { data, error } = await supabase.storage
+        .from(this.bucketName)
+        .upload(storagePath, fileBuffer, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (error) {
+        logger.warn({ error, storagePath }, 'Supabase Storage upload warning for receipt');
+      }
+
+      return {
+        storagePath: data?.path || storagePath,
+      };
+    } catch (error) {
+      logger.warn({ error }, 'Supabase Storage receipt upload failed — fallback to path record');
+      return { storagePath };
+    }
+  }
+
   async getSignedUrl(storagePath: string, expiresIn: number = 3600): Promise<string | null> {
     try {
       const supabase = getSupabaseAdmin();

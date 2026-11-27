@@ -9,6 +9,10 @@ import {
   useSubscriptionSummary,
   useSubscriptions,
 } from '@/features/subscriptions/hooks/useSubscriptions';
+import {
+  useExpenseAnalytics,
+  useExpenses,
+} from '@/features/expenses/hooks/useExpenses';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,18 +28,26 @@ import {
   AlertTriangle,
   Calendar,
   CheckCircle2,
-  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  ShoppingBag,
 } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 
 export default function AuthenticatedDashboardPage() {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState<number>(11);
+  const [currentYear, setCurrentYear] = useState<number>(2026);
 
   useEffect(() => {
     setMounted(true);
+    const d = new Date();
+    setCurrentMonth(d.getMonth() + 1);
+    setCurrentYear(d.getFullYear());
   }, []);
 
+  // Queries
   const { data: reminders, isLoading: remindersLoading } = useReminders({
     status: 'PENDING',
     limit: 5,
@@ -59,15 +71,28 @@ export default function AuthenticatedDashboardPage() {
     sortOrder: 'asc',
   });
 
+  const { data: expenseAnalytics, isLoading: expenseAnalyticsLoading } = useExpenseAnalytics(
+    currentMonth,
+    currentYear
+  );
+
+  const { data: recentExpenses, isLoading: recentExpensesLoading } = useExpenses({
+    limit: 4,
+    sortBy: 'date',
+    sortOrder: 'desc',
+  });
+
   const pendingRemindersCount = reminders?.length ?? 0;
   const unpaidBillsAmount = billSummary?.unpaidAmount ?? 0;
   const overdueBillsCount = billSummary?.overdueCount ?? 0;
-  const paidThisMonthAmount = billSummary?.paidThisMonthAmount ?? 0;
 
   const activeSubsCount = subSummary?.activeCount ?? 0;
   const monthlySubBurn = subSummary?.totalMonthlyCost ?? 0;
-  const upcomingRenewalsCount = subSummary?.upcomingRenewalsCount ?? 0;
   const trialsEndingSoonCount = subSummary?.trialEndingSoonCount ?? 0;
+
+  const monthExpensesTotal = expenseAnalytics?.currentMonthTotal ?? 0;
+  const momChangePercentage = expenseAnalytics?.momChangePercentage ?? 0;
+  const isSpendingUp = (expenseAnalytics?.momChangeAmount ?? 0) > 0;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -165,23 +190,34 @@ export default function AuthenticatedDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Settled Month Bills Card */}
+        {/* Month Spending Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Paid This Month</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Month Spending</CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            {summaryLoading ? (
+            {expenseAnalyticsLoading ? (
               <Skeleton className="h-8 w-28 mb-1" />
             ) : (
               <div className="text-2xl font-bold text-slate-900">
-                ₹{paidThisMonthAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                ₹{monthExpensesTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </div>
             )}
-            <p className="text-xs text-slate-500 mt-1">
-              Settled in current billing cycle
-            </p>
+            <div className="text-xs mt-1 flex items-center gap-1">
+              {isSpendingUp ? (
+                <span className="text-rose-600 font-medium flex items-center gap-0.5">
+                  <TrendingUp className="h-3 w-3" />
+                  +{momChangePercentage}% MoM
+                </span>
+              ) : (
+                <span className="text-emerald-600 font-medium flex items-center gap-0.5">
+                  <TrendingDown className="h-3 w-3" />
+                  {momChangePercentage}% MoM
+                </span>
+              )}
+              <span className="text-slate-400">vs last month</span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -408,6 +444,67 @@ export default function AuthenticatedDashboardPage() {
         </Card>
       </div>
 
+      {/* Recent Expenses Section */}
+      <Card className="border-slate-200">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-emerald-600" />
+              <CardTitle className="text-base font-semibold">Recent Transactions</CardTitle>
+            </div>
+            <CardDescription>Latest personal expenses logged in your account</CardDescription>
+          </div>
+          <Link href="/expenses">
+            <Button variant="ghost" size="sm" className="text-xs gap-1 text-emerald-600 hover:text-emerald-700">
+              View All
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {recentExpensesLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : !recentExpenses || recentExpenses.length === 0 ? (
+            <div className="text-center py-6 text-slate-400">
+              <Receipt className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm">No expenses logged yet</p>
+              <Link href="/expenses">
+                <Button variant="outline" size="sm" className="mt-3 text-xs">
+                  Log Expense
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {recentExpenses.map((exp) => (
+                <div
+                  key={exp.id}
+                  className="p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:border-slate-200 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="text-sm font-medium text-slate-800 truncate">{exp.title}</p>
+                    <span className="text-sm font-bold text-slate-900">
+                      ₹{Number(exp.amount).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+                    <span className="text-[11px] bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-600">
+                      {exp.category.replace('_', ' ')}
+                    </span>
+                    <span>
+                      {mounted ? format(new Date(exp.date), 'MMM d') : ''}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Quick Launchpad & Assistant CTA */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -457,7 +554,7 @@ export default function AuthenticatedDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="rounded-lg bg-white/10 p-3 text-xs text-slate-200">
-              Try asking: &ldquo;What subscriptions are renewing this month and what is my total monthly burn?&rdquo;
+              Try asking: &ldquo;How much did I spend on groceries this month vs my budget?&rdquo;
             </div>
             <Link href="/assistant">
               <Button size="sm" className="bg-sky-500 hover:bg-sky-600 text-white gap-2 text-xs w-full">

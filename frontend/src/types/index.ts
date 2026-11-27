@@ -31,7 +31,9 @@ export type SubscriptionStatus = 'ACTIVE' | 'CANCELLED' | 'PAUSED' | 'EXPIRED';
 
 export type ExpenseCategory =
   | 'FOOD'
+  | 'GROCERIES'
   | 'TRANSPORT'
+  | 'HOUSING'
   | 'UTILITIES'
   | 'ENTERTAINMENT'
   | 'HEALTHCARE'
@@ -42,6 +44,7 @@ export type ExpenseCategory =
   | 'SAVINGS'
   | 'INVESTMENT'
   | 'PERSONAL'
+  | 'PERSONAL_CARE'
   | 'TRAVEL'
   | 'OTHER';
 
@@ -153,14 +156,65 @@ export interface Expense {
   id: string;
   userId: string;
   title: string;
+  description?: string | null;
   amount: number;
   currency: string;
   category: ExpenseCategory;
   date: string;
   paymentMethod: PaymentMethod | null;
+  merchant?: string | null;
   notes: string | null;
+  receiptPath?: string | null;
+  receiptUrl?: string | null;
+  signedReceiptUrl?: string | null;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CategorySpending {
+  category: ExpenseCategory;
+  totalAmount: number;
+  count: number;
+  percentage: number;
+}
+
+export interface DailySpending {
+  date: string;
+  amount: number;
+  count: number;
+}
+
+export interface ExpenseAnalytics {
+  currency: string;
+  currentMonthTotal: number;
+  previousMonthTotal: number;
+  momChangeAmount: number;
+  momChangePercentage: number;
+  averageDailySpending: number;
+  categoryBreakdown: CategorySpending[];
+  topCategories: CategorySpending[];
+  dailyTrends: DailySpending[];
+  totalTransactionsCount: number;
+}
+
+export interface Budget {
+  id: string;
+  userId: string;
+  month: number;
+  year: number;
+  amount: number;
+  currency: string;
+  category: ExpenseCategory | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BudgetStatus extends Budget {
+  spentAmount: number;
+  remainingAmount: number;
+  percentageConsumed: number;
+  isExceeded: boolean;
 }
 
 export interface Task {

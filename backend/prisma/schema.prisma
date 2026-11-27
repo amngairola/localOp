@@ -21,6 +21,7 @@ model Profile {
   bills             Bill[]
   subscriptions     Subscription[]
   expenses          Expense[]
+  budgets           Budget[]
   tasks             Task[]
   documents         Document[]
   conversations     Conversation[]
@@ -188,7 +189,9 @@ model Subscription {
 
 enum ExpenseCategory {
   FOOD
+  GROCERIES
   TRANSPORT
+  HOUSING
   UTILITIES
   ENTERTAINMENT
   HEALTHCARE
@@ -199,6 +202,7 @@ enum ExpenseCategory {
   SAVINGS
   INVESTMENT
   PERSONAL
+  PERSONAL_CARE
   TRAVEL
   OTHER
 }
@@ -217,12 +221,17 @@ model Expense {
   id            String          @id @default(uuid())
   userId        String          @map("user_id")
   title         String
+  description   String?
   amount        Decimal         @db.Decimal(12, 2)
   currency      String          @default("INR")
   category      ExpenseCategory @default(OTHER)
   date          DateTime
   paymentMethod PaymentMethod?  @map("payment_method")
+  merchant      String?
   notes         String?
+  receiptUrl    String?         @map("receipt_url")
+  receiptPath   String?         @map("receipt_path")
+  tags          String[]        @default([])
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
@@ -232,6 +241,24 @@ model Expense {
   @@index([userId, date])
   @@index([userId, category])
   @@map("expenses")
+}
+
+model Budget {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  month     Int              // 1 - 12
+  year      Int              // e.g. 2026
+  amount    Decimal          @db.Decimal(12, 2)
+  currency  String           @default("INR")
+  category  ExpenseCategory? // null means overall monthly budget
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  profile Profile @relation(fields: [userId], references: [userId])
+
+  @@unique([userId, month, year, category])
+  @@index([userId, month, year])
+  @@map("budgets")
 }
 
 enum TaskStatus {
